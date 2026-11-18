@@ -34,6 +34,18 @@ jobs:
           pnpm --dir web-panel install --frozen-lockfile
           pnpm --dir web-panel run build
 
+      - name: Fix missing file references in csproj
+        shell: pwsh
+        run: |
+          $csprojPath = "WandEnhancer\WandEnhancer.csproj"
+          $content = Get-Content $csprojPath
+          $filtered = $content | Where-Object {
+            $_ -notmatch "Core\\EnhancerConfig\.cs" -and
+            $_ -notmatch "Core\\Patching\\Shared\\ElectronFuseWire\.cs" -and
+            $_ -notmatch "Core\\Patching\\Shared\\DiskFusePatch\.cs"
+          }
+          $filtered | Set-Content $csprojPath -Encoding UTF8
+
       - name: Build WandEnhancer.exe (MSBuild)
         shell: pwsh
         run: |
