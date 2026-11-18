@@ -28,26 +28,24 @@ jobs:
           cache: pnpm
           cache-dependency-path: web-panel/pnpm-lock.yaml
 
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Build web-panel (skip failed doc test)
+      - name: Build web-panel
         shell: pwsh
         run: |
-          Push-Location web-panel
-          pnpm install --frozen-lockfile
-          pnpm run build
-          Pop-Location
+          pnpm --dir web-panel install --frozen-lockfile
+          pnpm --dir web-panel run build
 
-      - name: Build Windows EXE
+      - name: Build WandEnhancer.exe (MSBuild)
         shell: pwsh
         run: |
-          $csproj = Get-ChildItem -Filter *.csproj -Recurse | Select-Object -First 1
-          dotnet publish $csproj.FullName -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./output
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -prerelease -products '*' -requires Microsoft.Component.MSBuild -property installationPath
+          $msbuild = Join-Path $vsPath 'MSBuild\Current\Bin\MSBuild.exe'
 
-      - name: Upload EXE Artifacts
+          & $msbuild Wand-Enhancer.sln /m /t:Restore /p:RestorePackagesConfig=true
+          & $msbuild Wand-Enhancer.sln /m /t:Build /p:Configuration=Release /p:Platform="Any CPU"
+
+      - name: Upload WandEnhancer.exe
         uses: actions/upload-artifact@v4
         with:
-          name: Wand-Enhancer-Windows
-          path: ./output/*.exe
+          name: WandEnhancer-Release
+          path: WandEnhancer/bin/Release/*
